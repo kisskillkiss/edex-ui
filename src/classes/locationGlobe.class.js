@@ -82,13 +82,13 @@ class LocationGlobe {
             // Connections
             this.conns = [];
             this.addConn = ip => {
-                require("https").get({host: "freegeoip.app", port: 443, path: "/json/"+ip, localAddress: window.mods.netstat.internalIPv4, agent: false}, res => {
+                require("https").get({host: "ipinfo.now.sh", port: 443, path: "/"+ip, localAddress: window.mods.netstat.internalIPv4, agent: false}, res => {
                     let rawData = "";
                     res.on("data", chunk => {
                         rawData += chunk;
                     });
                     res.on("end", () => {
-                        this.parseResponse(rawData, ip).catch(e => {
+                        this.parseResponse(rawData, ip).catch(() => {
                             let electron = require("electron");
                             electron.ipcRenderer.send("log", "note", "LocationGlobe: Error parsing data from ipinfo.now.sh");
                             electron.ipcRenderer.send("log", "debug", `Error: ${e}`);
@@ -135,9 +135,9 @@ class LocationGlobe {
 
     async parseResponse(rawData, ip) {
         const json = JSON.parse(rawData);
-        if (json.latitude && json.longitude) {
-            const lat = Number(json.latitude);
-            const lon = Number(json.longitude);
+        if (json.geo) {
+            const lat = Number(json.geo.latitude);
+            const lon = Number(json.geo.longitude);
 
             window.mods.globe.conns.push({
                 ip,
@@ -153,7 +153,7 @@ class LocationGlobe {
         this.globe.addMarker(randomLat - 20, randomLong + 150, '', true);
     }
     addTemporaryConnectedMarker(ip) {
-        require("https").get({host: "freegeoip.app", port: 443, path: "/json/"+ip, localAddress: window.mods.netstat.internalIPv4, agent: false}, res => {
+        require("https").get({host: "ipinfo.now.sh", port: 443, path: "/"+ip, localAddress: window.mods.netstat.internalIPv4, agent: false}, res => {
             let rawData = "";
             res.on("data", chunk => {
                 rawData += chunk;
@@ -165,9 +165,9 @@ class LocationGlobe {
                 } catch(e) {
                     return;
                 }
-                if (json.latitude && json.longitude) {
-                    const lat = Number(json.latitude);
-                    const lon = Number(json.longitude);
+                if (json.geo) {
+                    const lat = Number(json.geo.latitude);
+                    const lon = Number(json.geo.longitude);
 
                     window.mods.globe.conns.push({
                         ip,
