@@ -337,7 +337,7 @@ async function initUI() {
 
     document.getElementById("main_shell").setAttribute("style", "opacity: 0;");
     document.body.innerHTML += `
-    <section id="filesystem" style="width: 0px;" class="${window.settings.hideDotfiles ? "hideDotfiles" : ""}">
+    <section id="filesystem" style="width: 0px;" class="${window.settings.hideDotfiles ? "hideDotfiles" : ""} ${window.settings.fsListView ? "list-view" : ""}">
     </section>
     <section id="keyboard" style="opacity:0;">
     </section>`;
@@ -690,11 +690,11 @@ window.openSettings = async () => {
                         </select></td>
                     </tr>
                     <tr>
-                        <td>excludeSelfFromToplist</td>
-                        <td>Exclude eDEX from top processes monitoring</td>
-                        <td><select id="settingsEditor-excludeSelfFromToplist">
-                            <option>${window.settings.excludeSelfFromToplist}</option>
-                            <option>${!window.settings.excludeSelfFromToplist}</option>
+                        <td>excludeThreadsFromToplist</td>
+                        <td>Display threads in the top processes list</td>
+                        <td><select id="settingsEditor-excludeThreadsFromToplist">
+                            <option>${window.settings.excludeThreadsFromToplist}</option>
+                            <option>${!window.settings.excludeThreadsFromToplist}</option>
                         </select></td>
                     </tr>
                     <tr>
@@ -703,6 +703,14 @@ window.openSettings = async () => {
                         <td><select id="settingsEditor-hideDotfiles">
                             <option>${window.settings.hideDotfiles}</option>
                             <option>${!window.settings.hideDotfiles}</option>
+                        </select></td>
+                    </tr>
+                    <tr>
+                        <td>fsListView</td>
+                        <td>Show files in a more detailed list instead of an icon grid</td>
+                        <td><select id="settingsEditor-fsListView">
+                            <option>${window.settings.fsListView}</option>
+                            <option>${!window.settings.fsListView}</option>
                         </select></td>
                     </tr>
                     <tr>
@@ -756,8 +764,9 @@ window.writeSettingsFile = () => {
         nocursor: (document.getElementById("settingsEditor-nocursor").value === "true"),
         iface: document.getElementById("settingsEditor-iface").value,
         allowWindowed: (document.getElementById("settingsEditor-allowWindowed").value === "true"),
-        excludeSelfFromToplist: (document.getElementById("settingsEditor-excludeSelfFromToplist").value === "true"),
+        excludeThreadsFromToplist: (document.getElementById("settingsEditor-excludeThreadsFromToplist").value === "true"),
         hideDotfiles: (document.getElementById("settingsEditor-hideDotfiles").value === "true"),
+        fsListView: (document.getElementById("settingsEditor-fsListView").value === "true"),
         experimentalGlobeFeatures: (document.getElementById("settingsEditor-experimentalGlobeFeatures").value === "true"),
         experimentalFeatures: (document.getElementById("settingsEditor-experimentalFeatures").value === "true")
     };
@@ -772,20 +781,87 @@ window.writeSettingsFile = () => {
     document.getElementById("settingsEditorStatus").innerText = "New values written to settings.json file at "+new Date().toTimeString();
 };
 
+// Display available keyboard shortcuts
+window.openShortcutsHelp = () => {
+    new Modal({
+        type: "custom",
+        title: `Available Keyboard Shortcuts <i>(v${electron.remote.app.getVersion()})</i>`,
+        html: `<h5>Using either the on-screen or a physical keyboard, you can use the following shortcuts:</h5>
+                <table id="shortcutsHelp" style="width: 100%;">
+                    <tr>
+                        <th>Trigger</th>
+                        <th>Action</th>
+                    </tr>
+                    <tr>
+                        <td>${process.platform === "darwin" ? "Command" : "Ctrl + Shift"} + C</td>
+                        <td>Copy selected buffer from the terminal.</td>
+                    </tr>
+                    <tr>
+                        <td>${process.platform === "darwin" ? "Command" : "Ctrl + Shift"} + V</td>
+                        <td>Paste system clipboard to the terminal.</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Tab</td>
+                        <td>Switch to the next opened terminal tab (left to right order).</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + Tab</td>
+                        <td>Switch to the previous opened terminal tab (right to left order).</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + [1-5]</td>
+                        <td>Switch to a specific terminal tab, or create it if it hasn't been opened yet.</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + S</td>
+                        <td>Open the settings editor.</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + K</td>
+                        <td>List available keyboard shortcuts.</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + H</td>
+                        <td>Toggle hidden files and directories in the file browser.</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + P</td>
+                        <td>Toggle the on-screen keyboard's "Password Mode", that allows you to safely type<br> sensitive information even if your screen might be recorded (disables visual input feedback).</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + I</td>
+                        <td>Open Chromium Dev Tools (for debugging purposes).</td>
+                    </tr>
+                    <tr>
+                        <td>Ctrl + Shift + F5</td>
+                        <td>Trigger front-end hot reload.</td>
+                    </tr>
+                </table>
+                <br>`
+    });
+};
+
 // Global keyboard shortcuts
 const globalShortcut = electron.remote.globalShortcut;
 globalShortcut.unregisterAll();
 
 function registerKeyboardShortcuts() {
     // Open inspector
-    globalShortcut.register("CommandOrControl+Shift+I", () => {
+    globalShortcut.register("Control+Shift+I", () => {
         electron.remote.getCurrentWindow().webContents.toggleDevTools();
     });
 
     // Open settings
-    globalShortcut.register("CommandOrControl+Shift+S", () => {
+    globalShortcut.register("Control+Shift+S", () => {
         if (!document.getElementById("settingsEditor")) {
             window.openSettings();
+        }
+    });
+
+    // Open list of keyboard shortcuts
+    globalShortcut.register("Control+Shift+K", () => {
+        if (!document.getElementById("shortcutsHelp")) {
+            window.openShortcutsHelp();
         }
     });
 
@@ -811,7 +887,7 @@ function registerKeyboardShortcuts() {
 
     // Switch tabs
     // Next
-    globalShortcut.register("CommandOrControl+Tab", () => {
+    globalShortcut.register("Control+Tab", () => {
         if (window.term[window.currentTerm+1]) {
             window.focusShellTab(window.currentTerm+1);
         } else if (window.term[window.currentTerm+2]) {
@@ -825,7 +901,7 @@ function registerKeyboardShortcuts() {
         }
     });
     // Previous
-    globalShortcut.register("CommandOrControl+Shift+Tab", () => {
+    globalShortcut.register("Control+Shift+Tab", () => {
         let i = window.currentTerm ? window.currentTerm : 4;
         if (window.term[i] && i !== window.currentTerm) {
             window.focusShellTab(i);
@@ -840,30 +916,40 @@ function registerKeyboardShortcuts() {
         }
     });
     // By tab number
-    globalShortcut.register("CommandOrControl+1", () => {
+    globalShortcut.register("Control+1", () => {
         window.focusShellTab(0);
     });
-    globalShortcut.register("CommandOrControl+2", () => {
+    globalShortcut.register("Control+2", () => {
         window.focusShellTab(1);
     });
-    globalShortcut.register("CommandOrControl+3", () => {
+    globalShortcut.register("Control+3", () => {
         window.focusShellTab(2);
     });
-    globalShortcut.register("CommandOrControl+4", () => {
+    globalShortcut.register("Control+4", () => {
         window.focusShellTab(3);
     });
-    globalShortcut.register("CommandOrControl+5", () => {
+    globalShortcut.register("Control+5", () => {
         window.focusShellTab(4);
     });
 
     // Toggle hiding dotfiles in fsDisp
-    globalShortcut.register("CommandOrControl+Shift+H", () => {
+    globalShortcut.register("Control+Shift+H", () => {
         window.fsDisp.toggleHidedotfiles();
     });
 
+    // Toggle list view in fsDisp
+    globalShortcut.register("Control+Shift+L", () => {
+        window.fsDisp.toggleListview();
+    });
+
     // Hide on-screen keyboard visual feedback (#394)
-    globalShortcut.register("CommandOrControl+Shift+P", () => {
+    globalShortcut.register("Control+Shift+P", () => {
         window.keyboard.togglePasswordMode();
+    });
+
+    // Hot reload shortcut
+    globalShortcut.register("Control+Shift+F5", () => {
+        window.location.reload(true);
     });
 }
 registerKeyboardShortcuts();

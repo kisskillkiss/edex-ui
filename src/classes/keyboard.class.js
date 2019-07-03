@@ -279,7 +279,7 @@ class Keyboard {
 
         document.onkeyup = e => {
             // See #330
-            if (e.key !== "AltGraph" && e.getModifierState("AltGraph")) return;
+            if (e.key === "Control" && e.getModifierState("AltGraph")) return;
 
             // See #440
             if (e.code === "ShiftLeft" || e.code === "ShiftRight") this.container.dataset.isShiftOn = false;
@@ -307,12 +307,20 @@ class Keyboard {
                 window.audioManager.granted.play();
             }
         };
+
+        window.addEventListener("blur", () => {
+        		document.querySelectorAll("div.keyboard_key.active").forEach(key => {
+        				key.setAttribute("class", key.getAttribute("class").replace("active", ""));
+        				key.onmouseup({preventDefault: () => {return true}});
+        		});
+        });
     }
     pressKey(key) {
         let cmd = key.dataset.cmd || "";
 
         // Keyboard shortcuts
         if (this.container.dataset.isCtrlOn === "true" && this.container.dataset.isShiftOn === "true") {
+            console.log(key.dataset);
             switch(cmd) {
                 case "c":
                     window.term[window.currentTerm].clipboard.copy();
@@ -323,6 +331,11 @@ class Keyboard {
                 case "s":
                     if (!document.getElementById("settingsEditor")) {
                         window.openSettings();
+                    }
+                    return true;
+                case "k":
+                    if (!document.getElementById("shortcutsHelp")) {
+                        window.openShortcutsHelp();
                     }
                     return true;
                 case "i":
